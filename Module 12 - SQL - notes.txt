@@ -209,3 +209,41 @@ Below the GET route, let's add a route to handle user requests that aren't suppo
 app.use((req, res) => {
   res.status(404).end();
 });
+
+--------------------------------------------------
+
+Connect to the MySQL Database
+
+In this step, we'll connect to the MySQL database. To begin, we'll need to import the mysql2 package that we installed previously into the node_modules.
+
+At the top of the file, insert the following statement:
+
+const mysql = require('mysql2');
+
+Now let's add the code that will connect the application to the MySQL database. Add the following expression under the Express.js middleware section in server.js, right after app.use(express.json());:
+
+// Connect to database
+const db = mysql.createConnection(
+  {
+    host: 'localhost',
+    // Your MySQL username,
+    user: 'root',
+    // Your MySQL password
+    password: '',
+    database: 'election'
+  },
+  console.log('Connected to the election database.')
+);
+
+You'll need to replace the values of user and password with your MySQL username and password.
+
+Save your work and restart the server once more. The following success message will appear in the terminal if the connection was made correctly:
+
+Connected to the election database.
+Server running on port 3001
+
+Woo-hoo! We're connected to the database.
+
+-------------------------------------------
+
+
