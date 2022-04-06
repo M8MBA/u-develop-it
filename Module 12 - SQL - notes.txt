@@ -1,0 +1,100 @@
+Module 12 - SQL
+
+Structured Query Language
+
+Reference Guide
+https://coding-boot-camp.github.io/full-stack/mysql/mysql-reference-guide
+
+MySQL -  is considered the most reliable, scaleable, and developer-friendly open source relational database management system. It powers the back end of many of the popular social, streaming, and service web application
+
+mySQL2 - is a MySQL client for Node.js with a focus on performance. This is the npm package you'll use to connect your Node.js applications to a MySQL database.
+
+Which MySQL command do we use to display a table and information about each column's data types?
+
+CRUD: creating, reading, updating, and deleting
+    the four basic operations of most databases
+
+Do not have to use all caps its a visual thing.
+Makes the document easier to read.
+
+VARCHAR - character limit
+
+    A database is a collection of interrelated data. This data is stored in one or more tables that are related to one another.
+
+    A table is composed of rows and columns. A column represents a field. A row represents a record.
+
+    A query is a request for data from a database table or a combination of tables.
+
+opening the MySQL Shell that connects the terminal to the MySQL instance. In the terminal, at the root directory of the project, enter the following command:
+
+    mysql -u root -p
+
+mysql> 
+
+    This command helps verify that we're in the MySQL Shell. For an explanation of this command or to troubleshoot connection problems, refer to the Up and Running setup guide.
+
+The MySQL Shell enables us to create and delete databases, tables, table records, and queries to MySQL.
+
+Notice that the SQL keywords are in all caps. This SQL convention helps differentiate the SQL commands from identifiers like the database, table, and column names, which often appear in lowercase. Using all caps for SQL keywords is optional, but identifiers are case-sensitive, just like in JavaScript. For example, election and Election would reference different databases.
+
+Also note that the command must be terminated by a semicolon (;). Otherwise, a new line will prompt you for the next command. Input ; to escape the prompt, so that you can enter the command from the previous line.
+
+Now that the database has been created, we must select the election database so that any tables we create will be associated with that database. We'll do that by using the following command:
+
+USE election;
+
+-------------------------------------------------------
+
+Creating the Table using MySQL CLI
+
+We've decided to start with the candidates table, which will include first name, last name, and a Boolean value to track whether candidates are industry connected—an important consideration in the tech community.
+
+The SQL statement to create a table is, appropriately, CREATE TABLE. It is followed by the specification for the table you want to create.
+
+Take a look at the following SQL statement to create the candidates table:
+
+CREATE TABLE candidates (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(30) NOT NULL,
+  last_name VARCHAR(30) NOT NULL,
+  industry_connected BOOLEAN NOT NULL
+);
+
+Like JavaScript, SQL ignores white space and new lines, which means that clean formatting can improve readability. SQL also tends to be easily interpretable due to its use of plain language. With that in mind, let's review the preceding statement.
+
+In the first line of the statement, we create a table called candidates. Next, a set of parentheses lists the details of each column, including name, data type, and other keywords.
+
+The column names must not contain spaces and are normally lowercase. Notice that the statement names four columns, which are comma separated.
+
+The data types follow the column names. VARCHAR is followed by parentheses and a number, whereas BOOLEAN and INTEGER aren't. Can you guess which data type VARCHAR represents?
+
+If you guessed text, you're correct! VARCHAR stands for a variable character.
+
+The number that follows VARCHAR represents the number of characters that this column's values can have. A BOOLEAN wouldn't need a size limit, and most numbers in common use are only so large, but a text field could be as long as a book. Because data storage can be expensive, it's important to limit the amount of space that each field uses, especially for huge tables.
+connect the dots
+
+We're already familiar with data types. In JavaScript, we determined the data type by declaring a variable and assigning a value to that variable. JavaScript is a dynamically typed language—the value determines the variable's data type. In SQL, when we plan to store a value in a column, we explicitly declare the data type and storage parameters. If anyone tries to store data outside those parameters (e.g., a string in an INTEGER column), the database will not allow it.
+End of text box.
+
+Unlike JavaScript, MySQL and some other relational databases store Boolean values as 0 for false and 1 for true. Some databases have convenient constants named FALSE and TRUE set to 0 and 1, respectively.
+
+Now that we've determined the column names and their data types, let's explore the id column, along with PRIMARY KEY and AUTO_INCREMENT.
+
+The other columns contain pertinent information about the candidates, including their names and whether they're connected to the industry. In contrast, the id field is primarily used internally in MySQL to identify records. Although an id column isn't required for every table, you'll need one in any table that contains unique records. In practice, most tables will have one.
+
+The id is designated using the PRIMARY KEY and AUTO_INCREMENT attributes. PRIMARY KEY states that each value in this column must be unique for each record in the table. AUTO_INCREMENT, as you might guess, increments with each successive row and assigns that new value to the id. This keyword ensures that even if all other column values are identical for multiple records, the id will always be different—making the records distinguishable from each other.
+
+Later, we'll use PRIMARY KEY to link tables together. Each table can only contain one column with the PRIMARY KEY designation.
+
+The NOT NULL keyword means that a column must contain a value. In other words, if someone attempts to insert a record into candidates with any missing values, the database will not allow it because all columns are NOT NULL. (Conversely, NULL would mean that it's okay for a record to not have a value in a specific column.) Note that a PRIMARY KEY column by definition must contain a value, so it doesn't require the explicit NOT NULL keyword.
+
+To verify that the table was created successfully, we can use the following MySQL CLI command:
+
+        DESCRIBE candidates;
+
+The WHERE clause is a powerful filtering tool that can be used with equality operators like less than (<) or not equal to (!=). We can also use the OR and AND logical operators to evaluate multiple conditions. If the expression evaluates to true, the row is returned.
+https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html
+
+***** important *****
+
+    Use the command quit to exit the MySQL Shell. To find more commands available in the MySQL Shell, enter help.
