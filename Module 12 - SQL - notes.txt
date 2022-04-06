@@ -324,3 +324,197 @@ Create Query for Create Operation
     In the SQL command we use the INSERT INTO command for the candidates table to add the values that are assigned to params. The four placeholders must match the four values in params, so we must use an array.
 
     Because the candidates table includes four columns—id, first_name, last_name, and industry_connected—we need four placeholders (?) for those four values. The values in the params array must match the order of those placeholders.
+
+-------------------------------------------
+
+Create the GET Routes
+
+// Get all candidates
+app.get('/api/candidates', (req, res) => {
+  const sql = `SELECT * FROM candidates`;
+
+  db.query(sql, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: rows
+    });
+  });
+});
+
+Let's review the preceding route. We've built a lot of the logic already. We just need to incorporate the route's callback function to receive requests and send back responses.
+
+This route is designated with the endpoint /api/candidates. Remember, the api in the URL signifies that this is an API endpoint.
+
+The callback function will handle the client's request and the database's response. The request-response pattern should look familiar from the last module.
+
+We'll wrap the get() method around the database call that we made earlier and modify it a bit. The SQL statement SELECT * FROM candidates is assigned to the sql variable.
+
+Instead of logging the error, we'll send a status code of 500 and place the error message within a JSON object. This will all be handled within the error-handling conditional. The 500 status code indicates a server error—different than a 404, which indicates a user request error. The return statement will exit the database call once an error is encountered.
+
+If there was no error, then err is null and the response is sent back using the following statement:
+
+res.json({
+  message: 'success',
+  data: rows
+});
+
+Again, instead of logging the result, rows, from the database, we'll send this response as a JSON object to the browser, using res in the Express.js route callback.
+
+Test the route by saving your work, then restarting the Express.js server.
+
+-------------------------------------------
+
+Get a Single Candidate
+
+To create the API endpoint to get a single candidate, update the commented code for getting a single candidate in an Express.js route, as follows:
+
+// Get a single candidate
+app.get('/api/candidate/:id', (req, res) => {
+  const sql = `SELECT * FROM candidates WHERE id = ?`;
+  const params = [req.params.id];
+
+  db.query(sql, params, (err, row) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: row
+    });
+  });
+});
+
+Let's analyze the route. Here we're using the get() route method again. This time, the endpoint has a route parameter that will hold the value of the id to specify which candidate we'll select from the database.
+
+In the database call, we'll assign the captured value populated in the req.params object with the key id to params. The database call will then query the candidates table with this id and retrieve the row specified. Because params can be accepted in the database call as an array, params is assigned as an array with a single element, req.params.id.
+
+The error status code was changed to 400 to notify the client that their request wasn't accepted and to try a different request. In the route response, we'll send the row back to the client in a JSON object.
+
+To test this route, let's save and restart the server.
+
+Now navigate to the endpoint in the browser to check the route: http://localhost:3001/api/candidate/1 
+
+Now the front-end team can use this API endpoint to select a specific candidate from the database—which is especially useful, as mentioned previously, when a user selects from a list of names. Each name links to an endpoint that will return the details corresponding to the name selected.
+
+-------------------------------------------
+
+Create the DELETE Route
+
+Next, we'll create the API endpoint that will delete a candidate from the database. Update the commented code for deleting a candidate so that it's wrapped in an Express.js route, as shown in the following code:
+
+// Delete a candidate
+app.delete('/api/candidate/:id', (req, res) => {
+  const sql = `DELETE FROM candidates WHERE id = ?`;
+  const params = [req.params.id];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.statusMessage(400).json({ error: res.message });
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Candidate not found'
+      });
+    } else {
+      res.json({
+        message: 'deleted',
+        changes: result.affectedRows,
+        id: req.params.id
+      });
+    }
+  });
+});
+
+Let's break this route down to its component parts to see how it works. In this case, we must use the HTTP request method delete().
+
+The endpoint used here also includes a route parameter to uniquely identify the candidate to remove. Again, we're using a prepared SQL statement with a placeholder. We'll assign the req.params.id to params, as we did in the last route.
+
+The JSON object route response will be the message "deleted", with the changes property set to result.affectedRows. Again, this will verify whether any rows were changed.
+
+What if the user tries to delete a candidate that doesn't exist? That's where the else if statement comes in. If there are no affectedRows as a result of the delete query, that means that there was no candidate by that id. Therefore, we should return an appropriate message to the client, such as "Candidate not found".
+
+To check whether the route works, let's save and restart the server.
+
+Unfortunately, we can't simply plug the endpoint into the browser to check this time, because we can test only the get() request in the browser manually, not delete(). We'll need to use the API endpoint testing application Insomnia.
+
+Open the Insomnia application and try to delete the first candidate, Ronald, with id 1. Type the API endpoint, http://localhost:3001/api/candidate/1 (Links to an external site.), into the address bar and select the DELETE option in the drop-down menu. Select Send to execute the request, to reveal this message in the Preview panel
+
+This response message indicates that the candidate was successfully deleted. The response also shows that one row was affected, and the id of that row is 1.
+
+Now what if you try to delete a candidate that doesn't exist—like Ronald Firbank, whom you just deleted? Run the DELETE request again in Insomnia. You should see the error message in the Preview panel
+
+-------------------------------------------
+
+Create the POST Route
+
+One task remains on the GitHub issue, and that is to create candidates using the POST route. In this step, we'll create an API endpoint that will create candidates. Let's place Ronald back in the running and add him back to the candidates table.
+
+In the server.js file, below the delete route we just added, add the following code:
+
+// Create a candidate
+app.post('/api/candidate', ({ body }, res) => {
+  const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+});
+
+Let's break down this route before we proceed. As you can see, we use the HTTP request method post() to insert a candidate into the candidates table. We'll use the endpoint /api/candidate. In the callback function, we'll use the object req.body to populate the candidate's data. Notice that we're using object destructuring to pull the body property out of the request object. Until now, we've been passing the entire request object to the routes in the req parameter. In the callback function block, we assign errors to receive the return from the inputCheck function.
+
+This inputCheck module was provided by a helpful U Develop It member. We'll use this module to verify that user info in the request can create a candidate.
+
+We have to validate the user data before the changes are inserted into the database, to keep the database free of erroneous data and avoid wasting resources on expensive database calls.
+
+If the inputCheck() function returns an error, an error message is returned to the client as a 400 status code, to prompt for a different user request with a JSON object that contains the reasons for the errors.
+
+In order to use this function, we must import the module first. Place the following import statement near the top of the server.js file:
+
+const inputCheck = require('./utils/inputCheck');
+
+For the next step, we'll add the database call inside the post routine below the if (errors) block that follows theinputCheck() call, using the following code:
+
+const sql = `INSERT INTO candidates (first_name, last_name, industry_connected)
+  VALUES (?,?,?)`;
+const params = [body.first_name, body.last_name, body.industry_connected];
+
+db.query(sql, params, (err, result) => {
+  if (err) {
+    res.status(400).json({ error: err.message });
+    return;
+  }
+  res.json({
+    message: 'success',
+    data: body
+  });
+});
+
+Let's review the preceding code. Notice that the database call here uses a prepared statement that's a bit different than the one we used previously in the lesson. This is because there is no column for the id. MySQL will autogenerate the id and relieve us of the responsibility to know which id is available to populate.
+
+The params assignment contains three elements in its array that contains the user data collected in req.body.
+
+The database call logic is the same as what we previously built to create a candidate. Using the query() method, we can execute the prepared SQL statement. We send the response using the res.json() method with a success message and the user data that was used to create the new data entry.
+
+Save your work and restart the server once again.
+
+We'll need to use Insomnia to test this API endpoint, to use the HTTP request POST option. Add the API endpoint, http://localhost:3001/api/candidate (Links to an external site.), and select POST in the drop-down menu of HTTP request methods.
+
+Before selecting Send, we must populate the body with the candidate information. Select the JSON tab underneath the address bar so that we can send the candidate's information as a JSON object. Let's add Ronald Firbank back into the candidates table and restore his candidacy.
+
+Type the following into the editor in Insomnia, in the JSON tab:
+
+{
+    "first_name": "Ronald",
+    "last_name": "Firbank",
+    "industry_connected": 1
+}
+
+Now send the request by selecting Send.
+
+How can we check Ronald's new id? We can either use the browser and navigate to http://localhost:3001/api/candidates (Links to an external site.) or we can use Insomnia to send a GET request to http://localhost:3001/api/candidates (Links to an external site.). If we scroll down to the bottom, we'll see that Ronald Firbank has a new id of 11.
+
+We've successfully inserted a candidate into the candidates table. To double-check, run a few queries to the database using the API endpoints we created.
