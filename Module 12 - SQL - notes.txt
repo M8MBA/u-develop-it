@@ -144,3 +144,68 @@ Check the database
     Check that your MySQL Server is running(check system preferences)—initiate the MySQL command line by typing the following in your command line:
 
         mysql -u root -p
+_________________________________________
+
+Create Connection to Express.js Server
+
+In the next step, you'll create a connection to the Express.js server to host the application. If you need a refresher on the purpose of these steps, please revisit the module on Express.js.
+
+Follow these steps to create the connection:
+
+    Create the server.js file in the root directory, using the following command at the command line:
+
+    touch server.js
+
+    Open the server.js file and import express at the top of the file, by adding the following code:
+
+    const express = require('express');
+
+    Add the PORT designation and the app expression, by adding the following code:
+
+    const PORT = process.env.PORT || 3001;
+    const app = express();
+
+    Add the Express.js middleware, by adding the following code:
+
+    // Express middleware
+    app.use(express.urlencoded({ extended: false }));
+    app.use(express.json());
+
+    Now let's add the function that will start the Express.js server on port 3001. Place the following code at the bottom of the server.js file:
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+-----------------------------------------------
+
+Test the Express.js Connection
+
+And that's it! Let's see if the connection is working. Let's create a GET test route and place it above the connection function that we just created, as shown in the following example:
+
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello World'
+  });
+});
+
+In the preceding statement, we chose the route method get() and the response method res.json() to send the response message "Hello World" back to the client.
+
+At the terminal, execute the script we added to start the Express.js server, as follows:
+
+npm start
+
+We should see the following message logged in the terminal response:
+
+Server running on port 3001
+
+Let's open a browser and type the local host port connection into the address bar: http://localhost:3001 (Links to an external site.).
+
+Awesome! You've confirmed a connection to the Express.js server.
+
+Below the GET route, let's add a route to handle user requests that aren't supported by the app, as follows:
+
+// Default response for any other request (Not Found)
+app.use((req, res) => {
+  res.status(404).end();
+});
