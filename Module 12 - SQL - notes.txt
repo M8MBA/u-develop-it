@@ -518,3 +518,9 @@ Now send the request by selecting Send.
 How can we check Ronald's new id? We can either use the browser and navigate to http://localhost:3001/api/candidates (Links to an external site.) or we can use Insomnia to send a GET request to http://localhost:3001/api/candidates (Links to an external site.). If we scroll down to the bottom, we'll see that Ronald Firbank has a new id of 11.
 
 We've successfully inserted a candidate into the candidates table. To double-check, run a few queries to the database using the API endpoints we created.
+
+*** important ***
+SQL databases excel at relational data, meaning tables with their own data can still be linked together simply by referencing the other's primary keys.
+
+*** PRO TIP ***
+    Because TEXT is more lenient, it might be tempting to always use TEXT over VARCHAR. However, overuse of TEXT fields can bloat the database because MySQL will allocate the maximum amount of space for a TEXT value, no matter how long the value is. In SQL, it's important to keep the size of data in check as much as possible. If you know a field's data will be on the short side, always go with VARCHAR!
