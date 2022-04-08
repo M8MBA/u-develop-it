@@ -819,3 +819,47 @@ router.delete('/voter/:id', (req, res) => {
 Notice that in the query above, we did not create a params array to store the req.params.id. Although creating semantic variable names will increase your code's legibility, there is a cost due to allocating memory to store the object. Without the params array, the code is just as legible without the extra expenditure.
 
 Again, test the API endpoint in Insomnia to make sure everything's working. 
+
+_________________________________________
+
+Create a Votes Table
+
+This marks the last remaining feature that the voting app needs. To fulfill this feature, we'll create a new votes table. What's the benefit of having a separate table to track votes, though? It does two things for us:
+
+    It keeps the candidate and voter data clean by not cluttering up their tables with vote information.
+
+    It makes it easier to hold other elections later on. For instance, you could simply reset the votes table, or keep that history and track multiple elections by the dates on which the votes were cast.
+
+Before you create the votes table, pause for a moment and think about the data that needs to be captured per vote. Every vote will need to reference who voted (suggesting the need for a voter_id field) and who they voted for (a candidate_id field). It would also be helpful to track when the vote was cast (this could be a created_at field).
+
+Let's build this table in the schema.sql file. To do that, type the following statement below the CREATE TABLE voters code block:
+
+CREATE TABLE votes (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  voter_id INTEGER NOT NULL,
+  candidate_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+);
+
+Because we might make other edits to the schema during this lesson, we should add a DROP TABLE IF EXISTS statement at the top of the file. It is very important that we drop the tables in the following order:
+
+DROP TABLE IF EXISTS votes;
+DROP TABLE IF EXISTS candidates;
+DROP TABLE IF EXISTS parties;
+DROP TABLE IF EXISTS voters;
+
+This new votes table accommodates everything we need, but we should think about potential problems that might arise. For instance, a voter isn't allowed to vote twice, so the table should prevent duplicate records. Also, what happens to a vote if the relevant candidate or voter is removed from the database? We should probably remove the vote as well!
+
+Both of these issues could be handled on the JavaScript side with some crafty conditionals, but a safer approach would be to bake these gotchas into the database itself with constraints.
+
+Update the votes table creation to look like the following statement:
+
+CREATE TABLE votes (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  voter_id INTEGER NOT NULL,
+  candidate_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uc_voter UNIQUE (voter_id),
+  CONSTRAINT fk_voter FOREIGN KEY (voter_id) REFERENCES voters(id) ON DELETE CASCADE,
+  CONSTRAINT fk_candidate FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE
+);
