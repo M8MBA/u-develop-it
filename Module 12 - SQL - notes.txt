@@ -863,3 +863,144 @@ CREATE TABLE votes (
   CONSTRAINT fk_voter FOREIGN KEY (voter_id) REFERENCES voters(id) ON DELETE CASCADE,
   CONSTRAINT fk_candidate FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE
 );
+
+The first constraint, uc_voter, signifies that the values inserted into the voter_id field must be unique. For example, whoever has a voter_id of 1 can only appear in this table once.
+
+The next two constraints are foreign key constraints, which you've seen before. The difference now is the ON DELETE CASCADE statement. Previously, ON DELETE SET NULL would set the record's field to NULL if the key from the reference table was deleted. With ON DELETE CASCADE, deleting the reference key will also delete the entire row from this table.
+
+You'll better understand this once you implement it. Save the file—you'll rebuild the database using MySQL Shell. Be sure that your MySQL server is running!
+
+At the MySQL command prompt, switch to the election database and rebuild it by running the following commands:
+
+USE election;
+source db/schema.sql
+source db/seeds.sql
+
+Next, run the following SQL statements in the MySQL command line, one at a time:
+
+INSERT INTO votes (voter_id, candidate_id) VALUES(1, 1);
+INSERT INTO votes (voter_id, candidate_id) VALUES(2, 1);
+INSERT INTO votes (voter_id, candidate_id) VALUES(2, 2);
+
+The third SQL statement will display an error: Duplicate entry '2' for key 'votes.uc_voter'. This is actually a good sign! The constraint prevented a voter (with an id of 2) from voting twice.
+
+If you run a SELECT * FROM votes; query, the other two records should still be there,
+
+Now let's test the ON DELETE CASCADE effect by running the following statements:
+
+DELETE FROM voters WHERE id = 2;
+SELECT * FROM votes;
+
+After the voter is deleted from the voters table, the relevant row is also deleted from votes. Thus, the SELECT query only displays one record now,
+
+_________________________________________
+
+Create an API Route to Add New Votes
+
+Voting is intended to take place through the front-end app, so we'll need to create another POST route. Where in the files would it be appropriate to add a route for votes? Well, in the previous lesson, we introduced some much-needed modularity, separating the routes based on which tables they interacted with. Following this design pattern, we should probably make a new route file just for votes.
+
+In the routes/apiRoutes directory, create a file called voteRoutes.js. Open this file and import the necessary modules by adding the following code:
+
+const express = require('express');
+const router = express.Router();
+const db = require('../../db/connection');
+const inputCheck = require('../../utils/inputCheck');
+
+Before we build the POST route, take a moment to think about how it will be used. The front end will need to send us IDs for the voter and candidate. Both fields are required, meaning we should probably use our friend's inputCheck() function again. We also want to avoid malicious SQL injection, which warrants using prepared statements.
+
+Taking those points into consideration, the route you'll add to voteRoutes.js will look like the following code:
+
+router.post('/vote', ({ body }, res) => {
+  // Data validation
+  const errors = inputCheck(body, 'voter_id', 'candidate_id');
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+
+  const sql = `INSERT INTO votes (voter_id, candidate_id) VALUES (?,?)`;
+  const params = [body.voter_id, body.candidate_id];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: body,
+      changes: result.affectedRows
+    });
+  });
+});
+
+Lastly, you'll need to export this route so the main index.js file can import it. Add the following line of code to accomplish this:
+
+module.exports = router;
+
+Then in routes/apiRoutes/index.js, tell the router object to use the votes route alongside the others by adding the following line of code:
+
+router.use(require('./voteRoutes'));
+
+Everything looks good, but you should always test the routes yourself to make sure. Start the Node.js server and open Insomnia. Make a POST request to the /api/vote route, 
+
+_________________________________________
+
+Write Query to Get Vote Totals
+
+There's one route left to build before the voting app's back end is complete. We need to provide a GET route that returns the vote totals, though this will require a fairly tricky SQL query to pull off. Like past queries that we've written, it would be easier to test the query in MySQL first instead of trying to get it right from within Node.js and JavaScript.
+
+First, initiate the MySQL Shell again and switch to the election database. You can use the following statement as a starting point to add more records to the votes table—but feel free to add even more:
+
+INSERT INTO votes (voter_id, candidate_id) 
+VALUES(3,1), (4,2), (5,2), (6,2), (7,2), (8,3), (9,3);
+
+Once there's an adequate amount of records in your votes table, run the following query:
+
+SELECT COUNT(candidate_id) FROM votes;
+
+SQL provides a number of aggregate functions that can perform various math-related logic on your data. In the case of COUNT(), it will count how many times a certain field value appears.
+
+     Other useful aggregate functions in SQL include:
+
+    AVG() to return the average value within a group
+
+    SUM() to add up all of the values in a group
+
+    MIN() to return the minimum value of a group
+
+To learn more, read the MySQL documentation on aggregate functions https://dev.mysql.com/doc/refman/8.0/en/aggregate-functions.html .
+
+When you run the SELECT COUNT(candidate_id) statement as-is, however, it simply counts up how many rows there are in the table, which isn't all that helpful. We want to count votes per candidate, not total votes cast.
+
+This is where the GROUP BY clause comes into play. GROUP BY can consolidate several rows of data, grouping by a shared value (e.g., candidate_id). The nice thing about GROUP BY is that you can then run an aggregate function to retrieve an average, sum, or minimum value from the group.
+
+To try this out with your own data, run the following query:
+
+SELECT COUNT(candidate_id) FROM votes GROUP BY candidate_id;
+
+In the example, this shows that two candidates both received two votes, and a third candidate received four votes. This is correct but confusing. How do we know who got four votes?!
+
+The candidate_id field is a foreign key, so we can still join this table with the candidates table. While we're at it, we can also join the candidates table with the parties table to pull in their party affiliation.
+
+Run the following query in the MySQL command line:
+
+SELECT candidates.*, parties.name AS party_name, COUNT(candidate_id)
+FROM votes
+LEFT JOIN candidates ON votes.candidate_id = candidates.id
+LEFT JOIN parties ON candidates.party_id = parties.id
+GROUP BY candidate_id;
+
+By the looks of it, the JS Juggernauts Party is on fire! This data is essentially what we want, but there are a few more adjustments we can make. For one, we should rename the dynamic COUNT() field to something easier for the front-end team to use. Second, we might as well order these results by vote count so it's easier to see the winner at a glance.
+
+Update the SQL query to look like this:
+
+SELECT candidates.*, parties.name AS party_name, COUNT(candidate_id) AS count
+FROM votes
+LEFT JOIN candidates ON votes.candidate_id = candidates.id
+LEFT JOIN parties ON candidates.party_id = parties.id
+GROUP BY candidate_id ORDER BY count DESC;
+
+_________________________________________
+
+Create an API Route to Get Vote Totals
