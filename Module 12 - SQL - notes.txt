@@ -567,3 +567,35 @@ CREATE TABLE > INSERT > SELECT * FROM
 Make changes to the database: 
     source db/schema.sql
     source db/seeds.sql
+
+_________________________________________
+
+The first thing we'll do on this branch is set up a new voters table. Remember, having separate tables is actually a useful feature in relational databases. Normalization, which is the process of organizing relational data, provides the following benefits:
+
+    Each table represents a specific topic; this approach adheres to the best practice of separation of concerns.
+
+    It limits data redundancy.
+
+    It allows writing simpler SQL queries.
+
+    There's less risk for data modification errors. This is because you can refer to an entire record in another table by using its primary key. Any changes to that record happen in one place.
+
+DATETIME (data type) - 2020-01-01 13:00:00
+That probably doesn't seem very user-friendly, but the front-end team can take that value, convert it with JavaScript's Date() constructor, and display anything they want at that point.
+
+    DEFAULT: If you don't specify NOT NULL, then a field could potentially be NULL if that value isn't provided in an INSERT statement. With DEFAULT, however, you can specify what the value should be if no value is provided.
+
+    CURRENT_TIMESTAMP: This will return the current date and time in the same 2020-01-01 13:00:00 format. Note that the time will be based on what time it is according to your server, not the client's machine.
+
+So, in our code we're specifying CURRENT_TIMESTAMP as the value for DEFAULT.
+
+Rebuild and seed the database using the MySQL CLI. You can check that your MySQL Server is running and initiate the MySQL CLI by typing the following in your command line:
+    mysql -u root -p
+
+Enter your MySQL password when prompted. Then, at the MySQL CLI prompt, switch to the election database by typing the following command:
+    USE election;
+
+Then rebuild and seed the database by running the following commands:
+
+    source db/schema.sql
+    source db/seeds.sql
