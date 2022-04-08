@@ -599,3 +599,223 @@ Then rebuild and seed the database by running the following commands:
 
     source db/schema.sql
     source db/seeds.sql
+_________________________________________
+
+Modularize Database Connection Code
+
+First, we'll modularize the database connection logic.
+
+    Create a new file located at db/connection.js.
+
+    Remove the following lines of code from server.js and add them to connection.js:
+
+    const mysql = require('mysql2');
+
+    const db = mysql.createConnection({
+      host: 'localhost',
+      // Your MySQL username,
+      user: 'root',
+      // Your MySQL password
+      password: '',
+      database: 'election'
+    });
+
+    Because this file is its own module now, you'll need to export it by adding the following code at the bottom of the file:
+
+    module.exports = db;
+
+    Back in server.js, import this new module by adding the following variable declaration at the top of the file:
+
+    const db = require('./db/connection');
+
+Let's make sure that nothing broke in the transition. Start the Node.js server again with npm start and test one of your existing routes (for example, /api/candidates). If you see anything unusual, use your debugging skills and review your recent changes.
+
+Some questions you can ask yourself as you debug are:
+
+    Are the files in the right places?
+
+    Is the module.exports and require syntax correct?
+
+    Did you make any typos?
+
+Once you have everything working properly, we'll move on to modularizing the routes code.
+
+_________________________________________
+
+Modularize Routes Code
+
+Now we'll modularize the routes code.
+
+    In the project root folder, create a new folder called routes.
+
+    Inside that folder, create another folder called apiRoutes. It probably seems unnecessary to create a folder two levels deep, but this leaves space for the front-end team to eventually make a routes/htmlRoutes folder.
+
+    In the routes/apiRoutes directory, create the following files:
+
+        index.js
+
+        candidateRoutes.js
+
+        partyRoutes.js
+
+        voterRoutes.js
+
+Notice that each route file matches one of the tables, adhering to separation of concerns.
+_________________________________________
+
+Add Code to server.js
+
+In server.js, add the following two lines:
+
+// Add near the top of the file
+const apiRoutes = require('./routes/apiRoutes');
+
+// Add after Express middleware
+app.use('/api', apiRoutes);
+
+By adding the /api prefix here, we can remove it from the individual route expressions after we move them to their new home.
+rewind
+
+Remember that you don't have to specify index.js in the path (e.g., ./routes/apiRoutes/index.js). If the directory has an index.js file in it, Node.js will automatically look for it when requiring the directory.
+_________________________________________
+
+Add Sort Option to Return Voters in Alphabetical Order
+
+This is great, but we're not done yet. The front-end team wanted the data returned in alphabetical order by last name. We could use JavaScript and the Array.prototype.sort() method before sending the response back, but why do that when SQL has sort options built in?
+
+Update the sql variable to look like the following code:
+
+const sql = `SELECT * FROM voters ORDER BY last_name`;
+
+In SQL, rows can be sorted on retrieval simply by including an ORDER BY clause. If you want to sort the data in descending order (i.e., starting at Z instead of A), you can add a DESC keyword (e.g., ORDER BY last_name DESC).
+
+DEEP DIVE:
+-- get all voters who do not have a last name of Cooper or Jarman
+SELECT * FROM voters WHERE last_name != 'Cooper' AND last_name != 'Jarman';
+
+-- get all voters who have a .edu email address
+SELECT * FROM voters WHERE email LIKE '%.edu';
+
+-- get only the last created voter
+SELECT * FROM voters ORDER BY created_at DESC LIMIT 1;
+_________________________________________
+
+Create POST, PUT, and DELETE Routes
+
+The end goal is to allow people to register through the app (a POST request), update their email address (a PUT request), and deactivate their account (a DELETE request).
+
+POST
+
+First, let's implement the POST request. Assuming the front end will send us the user's first name, last name, and email address, we can write the route to appear like the following code:
+
+router.post('/voter', ({ body }, res) => {
+  const sql = `INSERT INTO voters (first_name, last_name, email) VALUES (?,?,?)`;
+  const params = [body.first_name, body.last_name, body.email];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: body
+    });
+  });
+});
+
+The ? prepared statements will protect us from malicious data, but we should also do our best to prevent blank records from being created. In the same POST route, add the following code right before the sql variable declaration:
+
+// Data validation
+const errors = inputCheck(body, 'first_name', 'last_name', 'email');
+if (errors) {
+  res.status(400).json({ error: errors });
+  return;
+}
+
+INSERT JSON DATA TO TEST POST
+
+{
+	"first_name": "Amiko",
+	"last_name": "Cascade",
+	"email": "amiko@schoolofcss.edu"
+}
+
+Insomnia:
+    POST from drop down
+    JSON in toolbar dropdown
+
+_________________________________________
+
+Create PUT Route
+
+Next, let's build the PUT route so users can update their email address. Following best practices, this will require a combination of req.params (to capture who is being updated) and req.body (to capture what is being updated).
+
+Add the following route to voterRoutes.js:
+
+router.put('/voter/:id', (req, res) => {
+  // Data validation
+  const errors = inputCheck(req.body, 'email');
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+
+  const sql = `UPDATE voters SET email = ? WHERE id = ?`;
+  const params = [req.body.email, req.params.id];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Voter not found'
+      });
+    } else {
+      res.json({
+        message: 'success',
+        data: req.body,
+        changes: result.affectedRows
+      });
+    }
+  });
+});
+
+Save your changes and then restart the Node.js server. Next, test the route in Insomnia.
+
+insomnia:
+
+    enter email address as JSON data
+    from drop down enter PUT
+    in toolbar select JSON
+    Select a specific id to test
+
+_________________________________________
+
+Create DELETE Route
+
+Lastly, we need a DELETE route to remove voters from the database. Add the following route to the voterRoutes.js file:
+
+router.delete('/voter/:id', (req, res) => {
+  const sql = `DELETE FROM voters WHERE id = ?`;
+
+  db.query(sql, req.params.id, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: res.message });
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Voter not found'
+      });
+    } else {
+      res.json({
+        message: 'deleted',
+        changes: result.affectedRows,
+        id: req.params.id
+      });
+    }
+  });
+});
+
+Notice that in the query above, we did not create a params array to store the req.params.id. Although creating semantic variable names will increase your code's legibility, there is a cost due to allocating memory to store the object. Without the params array, the code is just as legible without the extra expenditure.
+
+Again, test the API endpoint in Insomnia to make sure everything's working. 
